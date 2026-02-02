@@ -1,0 +1,61 @@
+# OS Files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.idea/
+.vscode/
+*.sublime-*
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+
+# Runtime
+*.pid
+*.seed
+*.pid.lock
+
+# Testing
+coverage/
+.nyc_output/
+
+# Temp files
+tmp/
+temp/
+.tmp/
+*.tmp
+
+# Backup files
+*.bak
+*.backup
+.last-sync.prev
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Dependencies (if any future scripts use them)
+node_modules/
+vendor/
+
+# Build outputs (if any compilation happens)
+dist/
+build/
+out/
+
+# Archives
+*.tar
+*.tar.gz
+*.zip
+*.7z
+*.rar
+
+# R2 sync state files (local testing)
+.last-sync
+.sync-complete
