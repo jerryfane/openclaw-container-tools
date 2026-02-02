@@ -2,6 +2,37 @@
 
 You are an AI assistant running inside a Cloudflare Sandbox container. This document explains how to manage your workspace persistence and R2 storage.
 
+## Getting These Tools
+
+### First Time Setup
+If the tools don't exist yet, clone them:
+```bash
+# Check if tools exist
+if [ ! -d "/openclaw-container-tools" ]; then
+    cd /
+    git clone https://github.com/jerryfane/openclaw-container-tools.git
+    chmod +x /openclaw-container-tools/scripts/*.sh
+    echo "Tools installed successfully!"
+else
+    echo "Tools already exist"
+fi
+```
+
+### Updating Tools
+To get the latest version:
+```bash
+cd /openclaw-container-tools
+git pull origin main
+chmod +x scripts/*.sh
+echo "Tools updated!"
+```
+
+### Quick Check
+```bash
+# Verify tools are available
+ls -la /openclaw-container-tools/scripts/
+```
+
 ## Core Understanding
 
 You're running in a container that can restart at any time. To preserve your work:
