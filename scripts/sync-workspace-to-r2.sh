@@ -1,11 +1,25 @@
 #!/bin/bash
 # Efficient Workspace to R2 Sync Script
-# Syncs /workspace/ to R2 with incremental updates, exclusions, and deletion tracking
+# Syncs OpenClaw workspace (/root/clawd or custom path) to R2 with incremental updates, exclusions, and deletion tracking
 
 set -e
 
 # Configuration
-WORKSPACE_DIR="/workspace"
+# Allow override via environment variable, with smart defaults
+if [ -n "$WORKSPACE_DIR" ]; then
+    # Use environment variable if set
+    WORKSPACE_DIR="$WORKSPACE_DIR"
+elif [ -d "/root/clawd" ]; then
+    # Use OpenClaw/Clawdbot workspace if it exists
+    WORKSPACE_DIR="/root/clawd"
+elif [ -d "/workspace" ]; then
+    # Fall back to /workspace if it exists
+    WORKSPACE_DIR="/workspace"
+else
+    # Default to OpenClaw standard location
+    WORKSPACE_DIR="/root/clawd"
+fi
+
 R2_MOUNT_PATH="/data/moltbot"
 BACKUP_SUBDIR="workspace"
 TIMESTAMP=$(date -u +"%Y%m%d_%H%M%S")

@@ -36,16 +36,21 @@ ls -la /openclaw-container-tools/scripts/
 ## Core Understanding
 
 You're running in a container that can restart at any time. To preserve your work:
-- Your `/workspace/` directory should be synced to R2 storage
+- Your OpenClaw workspace at `/root/clawd/` should be synced to R2 storage
 - R2 is mounted at `/data/moltbot/`
 - The sync scripts are in `/openclaw-container-tools/scripts/`
+
+**Note**: The sync script automatically detects your workspace location:
+- Primary: `/root/clawd/` (OpenClaw/Clawdbot standard location)
+- Fallback: `/workspace/` (if it exists)
+- Override: Set `WORKSPACE_DIR` environment variable for custom path
 
 ## Available Tools
 
 ### 1. Workspace Sync Script
 **Path**: `/openclaw-container-tools/scripts/sync-workspace-to-r2.sh`
 
-**Purpose**: Backs up your entire `/workspace/` to R2, excluding large/unnecessary files like `node_modules`, `.git`, `__pycache__`, etc.
+**Purpose**: Backs up your entire OpenClaw workspace (`/root/clawd/`) to R2, excluding large/unnecessary files like `node_modules`, `.git`, `__pycache__`, etc.
 
 **How to use**:
 ```bash
@@ -57,7 +62,7 @@ DRY_RUN=true /openclaw-container-tools/scripts/sync-workspace-to-r2.sh
 ```
 
 **What it does**:
-- Syncs `/workspace/` → `/data/moltbot/workspace/`
+- Syncs `/root/clawd/` → `/data/moltbot/workspace/`
 - Skips node_modules, .git, build outputs, virtual envs
 - Deletes files from R2 that you deleted locally
 - Shows progress and statistics
@@ -131,11 +136,14 @@ If you need to restore workspace from R2:
 # Check what's in R2
 ls -la /data/moltbot/workspace/
 
-# Restore everything (CAREFUL - overwrites local)
-rsync -av /data/moltbot/workspace/ /workspace/
+# Restore everything to OpenClaw workspace (CAREFUL - overwrites local)
+rsync -av /data/moltbot/workspace/ /root/clawd/
 
 # Restore specific directory
-rsync -av /data/moltbot/workspace/myproject/ /workspace/myproject/
+rsync -av /data/moltbot/workspace/myproject/ /root/clawd/myproject/
+
+# Custom workspace location
+WORKSPACE_DIR=/custom/path rsync -av /data/moltbot/workspace/ $WORKSPACE_DIR/
 ```
 
 ## Troubleshooting
@@ -159,8 +167,11 @@ The script has a 10GB safety limit. If needed:
 ### Nothing to sync
 Check if you have files:
 ```bash
-ls -la /workspace/
-find /workspace -type f | head -20
+ls -la /root/clawd/
+find /root/clawd -type f | head -20
+
+# Or check detected workspace
+/openclaw-container-tools/scripts/sync-workspace-to-r2.sh | head -5
 ```
 
 ### Check sync history
@@ -185,7 +196,9 @@ cat /data/moltbot/workspace/.sync-complete
 
 3. **Safety**: Script won't sync more than 10GB by default
 
-4. **Persistence**: After container restart, your workspace will be empty until you restore from R2
+4. **Persistence**: After container restart, restore your workspace from R2
+
+5. **Workspace Detection**: Script auto-detects `/root/clawd/` (OpenClaw) or `/workspace/`
 
 ## Quick Commands Reference
 
@@ -203,7 +216,7 @@ DRY_RUN=true /openclaw-container-tools/scripts/sync-workspace-to-r2.sh
 ls -la /data/moltbot/workspace/
 
 # Restore from R2
-rsync -av /data/moltbot/workspace/ /workspace/
+rsync -av /data/moltbot/workspace/ /root/clawd/
 
 # Check last sync
 cat /data/moltbot/workspace/.last-sync
@@ -212,7 +225,7 @@ cat /data/moltbot/workspace/.last-sync
 ## Your Workflow
 
 When working on projects:
-1. Make changes in `/workspace/`
+1. Make changes in `/root/clawd/` (your OpenClaw workspace)
 2. Run sync script periodically (or set up cron)
 3. Your work persists to R2
 4. After container restart, restore from R2 if needed
