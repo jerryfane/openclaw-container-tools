@@ -25,6 +25,7 @@ BACKUP_SUBDIR="workspace"
 TIMESTAMP=$(date -u +"%Y%m%d_%H%M%S")
 MAX_SIZE_GB=10  # Maximum size in GB to sync (safety limit)
 DRY_RUN="${DRY_RUN:-false}"  # Set DRY_RUN=true to test without syncing
+DELETE_MODE="${DELETE_MODE:-false}"  # Set DELETE_MODE=true to remove files from R2 that don't exist locally (DANGEROUS!)
 
 # Colors for output
 RED='\033[0;31m'
@@ -107,6 +108,7 @@ echo "Timestamp: $TIMESTAMP"
 echo "Source: $WORKSPACE_DIR"
 echo "Destination: $R2_MOUNT_PATH/$BACKUP_SUBDIR"
 echo -e "Dry Run: ${YELLOW}$DRY_RUN${NC}"
+echo -e "Delete Mode: ${YELLOW}$DELETE_MODE${NC}"
 echo ""
 
 # Check if workspace directory exists
@@ -166,11 +168,19 @@ echo "$TIMESTAMP" > "$R2_MOUNT_PATH/$BACKUP_SUBDIR/.last-sync"
 # Perform the sync using rsync
 echo "Starting incremental sync..."
 echo "Excluding: node_modules, .git, __pycache__, venv, and other large/temp files"
+if [ "$DELETE_MODE" = "true" ]; then
+    echo -e "${RED}WARNING: Delete mode is ON - files not in local will be removed from R2${NC}"
+fi
 echo ""
 
 if command -v rsync >/dev/null 2>&1; then
     # Build the rsync command
-    RSYNC_CMD="rsync -avz --delete --delete-excluded --stats --human-readable"
+    RSYNC_CMD="rsync -avz --stats --human-readable"
+
+    # Only add delete flags if explicitly requested
+    if [ "$DELETE_MODE" = "true" ]; then
+        RSYNC_CMD="$RSYNC_CMD --delete --delete-excluded"
+    fi
 
     # Add progress flag for better UX
     RSYNC_CMD="$RSYNC_CMD --progress"
@@ -213,16 +223,18 @@ else
         echo "... and more"
         SYNC_RESULT=0
     else
-        # Clean destination first (manual deletion sync)
-        echo "Cleaning destination of deleted files..."
-        find "$R2_MOUNT_PATH/$BACKUP_SUBDIR" -mindepth 1 -maxdepth 1 ! -name '.last-sync*' ! -name '.sync-complete' -type d | \
-            while read -r dir; do
-                basename_dir=$(basename "$dir")
-                if [ ! -e "$WORKSPACE_DIR/$basename_dir" ]; then
-                    echo "  Removing deleted directory: $basename_dir"
-                    rm -rf "$dir"
-                fi
-            done
+        # Only clean destination if delete mode is explicitly enabled
+        if [ "$DELETE_MODE" = "true" ]; then
+            echo "Cleaning destination of deleted files..."
+            find "$R2_MOUNT_PATH/$BACKUP_SUBDIR" -mindepth 1 -maxdepth 1 ! -name '.last-sync*' ! -name '.sync-complete' -type d | \
+                while read -r dir; do
+                    basename_dir=$(basename "$dir")
+                    if [ ! -e "$WORKSPACE_DIR/$basename_dir" ]; then
+                        echo "  Removing deleted directory: $basename_dir"
+                        rm -rf "$dir"
+                    fi
+                done
+        fi
 
         # Copy with tar for better preservation and exclusion handling
         echo "Syncing with tar (excluding large directories)..."
@@ -287,5 +299,8 @@ echo "===================================================="
 echo ""
 echo "Usage tips:"
 echo "  - Run with DRY_RUN=true to preview changes"
+echo "  - Run with DELETE_MODE=true to remove files from R2 (use carefully!)"
 echo "  - Adjust MAX_SIZE_GB if you need to sync larger workspaces"
 echo "  - Edit EXCLUSIONS array to customize ignored files"
+echo ""
+echo "Safety note: By default, files are NEVER deleted from R2 to protect against data loss"

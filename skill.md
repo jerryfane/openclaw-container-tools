@@ -59,13 +59,19 @@ You're running in a container that can restart at any time. To preserve your wor
 
 # Test mode (see what would sync without doing it)
 DRY_RUN=true /openclaw-container-tools/scripts/sync-workspace-to-r2.sh
+
+# DANGEROUS: Enable deletion mode (removes files from R2 that don't exist locally)
+# Only use this if you really want to clean up R2!
+DELETE_MODE=true /openclaw-container-tools/scripts/sync-workspace-to-r2.sh
 ```
 
 **What it does**:
 - Syncs `/root/clawd/` → `/data/moltbot/workspace/`
 - Skips node_modules, .git, build outputs, virtual envs
-- Deletes files from R2 that you deleted locally
+- **NEVER deletes files from R2** (default behavior for safety)
 - Shows progress and statistics
+
+**Important**: Files are only ADDED/UPDATED in R2, never deleted. This protects against data loss on container restart.
 
 ### 2. Startup Script (Reference)
 **Path**: `/openclaw-container-tools/scripts/start-moltbot.sh`
@@ -192,7 +198,9 @@ cat /data/moltbot/workspace/.sync-complete
    - dist, build (compilation outputs)
    - Large archives (.zip, .tar.gz)
 
-2. **Deletion sync**: When you delete files locally, they're deleted from R2 too
+2. **No automatic deletion**: Files are NEVER deleted from R2 by default (safety feature)
+   - Protects against data loss on container restart
+   - Use `DELETE_MODE=true` only when you want to clean up R2
 
 3. **Safety**: Script won't sync more than 10GB by default
 
@@ -203,11 +211,14 @@ cat /data/moltbot/workspace/.sync-complete
 ## Quick Commands Reference
 
 ```bash
-# Sync now
+# Sync now (safe - only adds/updates, never deletes)
 /openclaw-container-tools/scripts/sync-workspace-to-r2.sh
 
 # Test sync (dry run)
 DRY_RUN=true /openclaw-container-tools/scripts/sync-workspace-to-r2.sh
+
+# Clean up R2 (DANGEROUS - removes files not in local)
+DELETE_MODE=true /openclaw-container-tools/scripts/sync-workspace-to-r2.sh
 
 # Set up hourly sync
 (crontab -l 2>/dev/null; echo "0 * * * * /openclaw-container-tools/scripts/sync-workspace-to-r2.sh") | crontab -
@@ -227,7 +238,12 @@ cat /data/moltbot/workspace/.last-sync
 When working on projects:
 1. Make changes in `/root/clawd/` (your OpenClaw workspace)
 2. Run sync script periodically (or set up cron)
-3. Your work persists to R2
-4. After container restart, restore from R2 if needed
+3. Your work accumulates in R2 (never deleted automatically)
+4. After container restart, restore from R2
+
+**Safety First**: The sync script will NEVER delete files from R2 unless you explicitly use `DELETE_MODE=true`. This means:
+- On container restart with empty workspace, syncing won't delete R2 data
+- R2 acts as a cumulative backup of all your work
+- Old files stay in R2 even if deleted locally (unless you explicitly clean)
 
 Remember: Container can restart anytime. Sync important work frequently!
